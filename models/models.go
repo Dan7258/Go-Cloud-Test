@@ -16,13 +16,13 @@ func UpdateClient(rl *RateLimits) error {
 	return err
 }
 
-func DeleteClient(ID int64) error {
-	err := DB.Delete(new(RateLimits), ID).Error
+func DeleteClient(clientID string) error {
+	err := DB.Delete(new(RateLimits), clientID).Error
 	return err
 }
 
-func GetClient(ID int64) (*RateLimits, error) {
+func GetClient(clientID string) (*RateLimits, error) {
 	client := new(RateLimits)
-	err := DB.First(client, ID).Error
+	err := DB.First(client, clientID).Error
 	return client, err
 }

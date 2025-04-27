@@ -2,6 +2,7 @@ package main
 
 import (
 	"cloud/config_handler"
+	"cloud/controllers"
 	"cloud/load_balancer"
 	"cloud/models"
 	"net/http"
@@ -14,6 +15,7 @@ func main() {
 	config.Init()
 	lb := new(loadBalancer.LoadBalancer)
 	lb.Init(*config)
-	http.HandleFunc("/", lb.ServeProxy)
+	http.HandleFunc("/clients/", controllers.ClientHandler)
+	//http.HandleFunc("/", lb.ServeProxy)
 	http.ListenAndServe(":"+config.Port, nil)
 }

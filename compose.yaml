@@ -7,7 +7,9 @@ services:
       POSTGRES_PASSWORD: cloud
       POSTGRES_DB: cloudDB
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - cloudata:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
       - "5432:5432"
+volumes:
+  cloudata:
