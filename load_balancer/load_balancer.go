@@ -3,6 +3,8 @@ package loadBalancer
 import (
 	"cloud/config_handler"
 	"cloud/logger"
+	"cloud/models"
+	rateLimiter "cloud/rate_limiter"
 	"fmt"
 	"net/http"
 	"net/http/httputil"
@@ -26,16 +28,33 @@ func (lb *LoadBalancer) ServeProxy(w http.ResponseWriter, r *http.Request) {
 			counter = len(lb.backends)
 			continue
 		}
-
 		currentHost = nil
 	}
 	if currentHost != nil {
-		proxy := httputil.NewSingleHostReverseProxy(currentHost)
-		proxy.ServeHTTP(w, r)
+		tokenBucket := new(rateLimiter.TokenBucket)
+		ok := tokenBucket.GetClientDataFromRedis(r.RemoteAddr)
+
+		if !ok {
+			var err error
+			if models.ThsClientExists(r.RemoteAddr) {
+				err = tokenBucket.GetClientDataFromDB(r.RemoteAddr)
+			} else {
+				err = tokenBucket.CreateNewClient(r.RemoteAddr)
+			}
+			if err != nil {
+				logger.PrintWarning(err.Error())
+			}
+		}
+		ok = tokenBucket.CallClient()
+		if ok {
+			proxy := httputil.NewSingleHostReverseProxy(currentHost)
+			proxy.ServeHTTP(w, r)
+		}
+		tokenBucket.SetClientDataInRedis()
+
 	} else {
 		logger.PrintError("Нет доступных серверов")
 	}
-
 }
 
 func (lb *LoadBalancer) GetNextBackend() *url.URL {

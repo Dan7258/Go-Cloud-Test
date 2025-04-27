@@ -2,11 +2,11 @@ package models
 
 type RateLimits struct {
 	ClientID      string `json:"client_id" gorm:"primary_key;"`
-	Capacity      int64  `json:"capacity" gorm:"not null;"`
-	RatePerSecond int64  `json:"rate_per_second" gorm:"not null;"`
+	Capacity      int    `json:"capacity" gorm:"not null;"`
+	RatePerSecond int    `json:"rate_per_second" gorm:"not null;"`
 }
 
-func CreateClient(rl *RateLimits) error {
+func CreateClient(rl RateLimits) error {
 	err := DB.Create(&rl).Error
 	return err
 }
@@ -21,8 +21,17 @@ func DeleteClient(clientID string) error {
 	return err
 }
 
-func GetClient(clientID string) (*RateLimits, error) {
+func GetClient(clientID string) (RateLimits, error) {
 	client := new(RateLimits)
 	err := DB.First(client, clientID).Error
-	return client, err
+	return *client, err
+}
+
+func ThsClientExists(clientID string) bool {
+	client := new(RateLimits)
+	result := DB.Select("client_id").Where("client_id = ?", clientID).First(client)
+	if result.Error != nil {
+		return false
+	}
+	return true
 }
