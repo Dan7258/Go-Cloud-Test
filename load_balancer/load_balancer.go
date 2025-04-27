@@ -26,13 +26,10 @@ func (lb *LoadBalancer) ServeProxy(w http.ResponseWriter, r *http.Request) {
 			counter = len(lb.backends)
 			continue
 		}
-		msg := fmt.Sprintf("Сервер %s не отвечает", currentHost)
-		logger.PrintWarning(msg)
+
 		currentHost = nil
 	}
 	if currentHost != nil {
-		msg := fmt.Sprintf("Соединение с сервером %s установлено", currentHost)
-		logger.PrintInfo(msg)
 		proxy := httputil.NewSingleHostReverseProxy(currentHost)
 		proxy.ServeHTTP(w, r)
 	} else {
@@ -64,8 +61,12 @@ func (lb *LoadBalancer) Ping(backend *url.URL) bool {
 	resp, err := client.Get(backend.String())
 	logger.PrintInfo("Проверка состояния сервера: " + backend.String())
 	if err != nil {
+		msg := fmt.Sprintf("Сервер %s не отвечает: %v", backend, err)
+		logger.PrintWarning(msg)
 		return false
 	}
 	resp.Body.Close()
+	msg := fmt.Sprintf("Соединение с сервером %s установлено", backend)
+	logger.PrintInfo(msg)
 	return true
 }
