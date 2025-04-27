@@ -1,8 +1,8 @@
 package configHandler
 
 import (
+	"cloud/logger"
 	"encoding/json"
-	"errors"
 	"log"
 	"os"
 )
@@ -26,13 +26,10 @@ func (c *Config) Init() {
 		panic(err)
 	}
 	if c.Backends == nil {
-		log.Fatal("список серверов пуст")
-		panic(errors.New("список серверов пуст"))
+		logger.PrintFatal("список серверов пуст")
 	}
 	if c.Port == "" {
-		log.Fatal("отсутствует порт прослушивания")
-		panic(errors.New("отсутствует порт прослушивания"))
+		logger.PrintFatal("отсутствует порт прослушивания")
 	}
-	log.Println("Получены данные для балансировщика нагрузки")
-
+	logger.PrintInfo("Получены данные для балансировщика нагрузки")
 }
