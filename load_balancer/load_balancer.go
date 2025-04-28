@@ -5,6 +5,7 @@ import (
 	"cloud/models"
 	"cloud/rate_limiter"
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -24,16 +25,19 @@ func (lb *LoadBalancer) ServeProxy(w http.ResponseWriter, r *http.Request) {
 	}
 	if currentHost != nil {
 		tokenBucket := new(rateLimiter.TokenBucket)
-		ok := tokenBucket.GetClientDataFromRedis(r.RemoteAddr)
+		ip, _, _ := net.SplitHostPort(r.RemoteAddr)
+		ok := tokenBucket.GetClientDataFromRedis(ip)
 		if !ok {
 			var err error
-			if models.ThsClientExists(r.RemoteAddr) {
-				err = tokenBucket.GetClientDataFromDB(r.RemoteAddr)
+			if models.ThsClientExists(ip) {
+				err = tokenBucket.GetClientDataFromDB(ip)
 			} else {
-				err = tokenBucket.CreateNewClient(r.RemoteAddr)
+				err = tokenBucket.CreateNewClient(ip)
 			}
 			if err != nil {
 				logger.PrintWarning(err.Error())
+			} else {
+				tokenBucket.SetClientDataInRedis()
 			}
 		}
 		ok = tokenBucket.CallClient()

@@ -5,18 +5,21 @@ import (
 	"cloud/controllers"
 	"cloud/load_balancer"
 	"cloud/models"
+	"cloud/rate_limiter"
 	"net/http"
 )
 
 func main() {
+	config := new(configHandler.Config)
+	config.Init()
 	models.InitENV()
 	models.InitDB()
 	models.InitRDB()
-	config := new(configHandler.Config)
-	config.Init()
 	lb := new(loadBalancer.LoadBalancer)
 	lb.Init(*config)
+	rateLimiter.InitTBConfig(*config)
+	go rateLimiter.StartTokenTicker()
 	http.HandleFunc("/clients/", controllers.ClientHandler)
-	//http.HandleFunc("/", lb.ServeProxy)
+	http.HandleFunc("/", lb.ServeProxy)
 	http.ListenAndServe(":"+config.Port, nil)
 }

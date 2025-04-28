@@ -25,7 +25,7 @@ func CreateClient(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	client := new(models.RateLimits)
 	json.NewDecoder(r.Body).Decode(client)
-	if client.ClientID == "" || client.Capacity == 0 || client.RatePerSecond == 0 {
+	if client.ClientID == "" {
 		logger.SendError(w, http.StatusInternalServerError, "Запрос не содержит данные")
 	}
 	err := models.CreateClient(*client)

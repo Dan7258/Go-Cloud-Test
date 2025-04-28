@@ -47,12 +47,12 @@ func InitDB() {
 
 	f := false
 	for _, table := range tables {
-		if table == "rate_limiter" {
+		if table == "rate_limits" {
 			f = true
 		}
 	}
 	if !f {
-		logger.PrintFatal("Отсутствует таблица \"rate_limiter\"")
+		logger.PrintFatal("Отсутствует таблица \"rate_limits\"")
 	}
 
 }

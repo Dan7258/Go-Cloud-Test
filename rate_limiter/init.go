@@ -16,14 +16,14 @@ type TokenBucket struct {
 }
 
 type TokenBucketConfig struct {
-	Capacity      int
-	RatePerSecond int
+	Capacity   int
+	RatePerSec int
 }
 
 var tokenBucketConfig TokenBucketConfig
 
-func (tb *TokenBucket) Init(config configHandler.Config) {
+func InitTBConfig(config configHandler.Config) {
 	tokenBucketConfig.Capacity = config.Capacity
-	tokenBucketConfig.RatePerSecond = config.RatePerSecond
+	tokenBucketConfig.RatePerSec = config.RatePerSec
 	logger.PrintInfo("Получены данные для Rate-Limiting")
 }

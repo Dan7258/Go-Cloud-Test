@@ -7,10 +7,10 @@ import (
 )
 
 type Config struct {
-	Port          string   `json:"port"`
-	Backends      []string `json:"backends"`
-	Capacity      int      `json:"capacity"`
-	RatePerSecond int      `json:"rate_per_second"`
+	Port       string   `json:"port"`
+	Backends   []string `json:"backends"`
+	Capacity   int      `json:"capacity"`
+	RatePerSec int      `json:"rate_per_sec"`
 }
 
 func (c *Config) Init() {

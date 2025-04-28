@@ -10,8 +10,6 @@ import (
 func (tb *TokenBucket) CallClient() bool {
 	tb.mutex.Lock()
 	defer tb.mutex.Unlock()
-	diff := int(time.Now().Sub(tb.LastCall).Seconds())
-	tb.CurrentTokenCount = (diff*tb.RateLimits.RatePerSecond + tb.CurrentTokenCount) % tb.RateLimits.Capacity
 	if tb.CurrentTokenCount == 0 {
 		return false
 	}
@@ -24,7 +22,7 @@ func (tb *TokenBucket) CreateNewClient(clientID string) error {
 	tb.mutex.Lock()
 	defer tb.mutex.Unlock()
 	tb.RateLimits.ClientID = clientID
-	tb.RateLimits.RatePerSecond = tokenBucketConfig.RatePerSecond
+	tb.RateLimits.RatePerSec = tokenBucketConfig.RatePerSec
 	tb.RateLimits.Capacity = tokenBucketConfig.Capacity
 	tb.CurrentTokenCount = tokenBucketConfig.Capacity
 	tb.LastCall = time.Now()
@@ -70,13 +68,44 @@ func (tb *TokenBucket) SetClientDataInRedis() bool {
 	defer tb.mutex.Unlock()
 	data, err := json.Marshal(tb)
 	if err != nil {
-		logger.PrintError("Ошибка при установке данных в Redis")
+		logger.PrintError("Ошибка при установке данных в Redis: " + err.Error())
 		return false
 	}
+
 	err = models.SetDataInRedis(tb.RateLimits.ClientID, data, time.Hour)
 	if err != nil {
 		return false
 	}
 	logger.PrintInfo("Данные клиента установлены в Redis")
 	return true
+}
+
+func UpdateClientDataByKeysInRedis() {
+	keys, err := models.GetAllKeysFromRedis()
+	if err != nil {
+		return
+	}
+	for _, key := range keys {
+		tb := new(TokenBucket)
+		tb.GetClientDataFromRedis(key)
+		diff := int(time.Now().Sub(tb.LastCall).Seconds())
+		tb.CurrentTokenCount = (diff*tb.RateLimits.RatePerSec + tb.CurrentTokenCount)
+		if tb.CurrentTokenCount > tb.RateLimits.Capacity {
+			tb.CurrentTokenCount = tb.RateLimits.Capacity
+		}
+		tb.LastCall = time.Now()
+		tb.SetClientDataInRedis()
+	}
+	logger.PrintInfo("Пополнили токены")
+}
+
+func StartTokenTicker() {
+	tiker := time.NewTicker(30 * time.Second)
+	defer tiker.Stop()
+	for {
+		select {
+		case <-tiker.C:
+			UpdateClientDataByKeysInRedis()
+		}
+	}
 }
