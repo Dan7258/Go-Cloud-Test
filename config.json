@@ -1,8 +1,8 @@
 {
   "port" : "8080",
   "backends": [
-    "localhost:9023",
-    "localhost:8081"
+    "host.docker.internal:9023",
+    "host.docker.internal:8081"
   ],
   "capacity" : 100,
   "rate_per_sec" : 2

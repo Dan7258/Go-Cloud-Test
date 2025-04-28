@@ -1,4 +1,17 @@
 services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cloud_app
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - ./config.json:/app/config.json
+      - ./.env:/app/.env
   db:
     image: postgres:latest
     container_name: cloudDB
