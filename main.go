@@ -11,6 +11,7 @@ import (
 func main() {
 	models.InitENV()
 	models.InitDB()
+	models.InitRDB()
 	config := new(configHandler.Config)
 	config.Init()
 	lb := new(loadBalancer.LoadBalancer)

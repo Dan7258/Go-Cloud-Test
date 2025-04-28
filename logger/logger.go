@@ -1,6 +1,15 @@
 package logger
 
-import "log"
+import (
+	"encoding/json"
+	"log"
+	"net/http"
+)
+
+type ErrorResponse struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
 
 const (
 	Green  = "\033[32m"
@@ -31,4 +40,12 @@ func PrintError(msg string) {
 
 func PrintFatal(msg string) {
 	log.Fatalf("[%s]: %s\n", FATAL, msg)
+}
+
+func SendError(w http.ResponseWriter, code int, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(ErrorResponse{
+		Code:    code,
+		Message: message,
+	})
 }

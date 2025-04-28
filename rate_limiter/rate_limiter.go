@@ -1,18 +1,11 @@
 package rateLimiter
 
 import (
+	"cloud/logger"
 	"cloud/models"
 	"encoding/json"
-	"sync"
 	"time"
 )
-
-type TokenBucket struct {
-	RateLimits        models.RateLimits
-	CurrentTokenCount int
-	LastCall          time.Time
-	mutex             sync.Mutex
-}
 
 func (tb *TokenBucket) CallClient() bool {
 	tb.mutex.Lock()
@@ -31,12 +24,17 @@ func (tb *TokenBucket) CreateNewClient(clientID string) error {
 	tb.mutex.Lock()
 	defer tb.mutex.Unlock()
 	tb.RateLimits.ClientID = clientID
-	tb.RateLimits.RatePerSecond = 2
-	tb.RateLimits.Capacity = 100
-	tb.CurrentTokenCount = 100
+	tb.RateLimits.RatePerSecond = tokenBucketConfig.RatePerSecond
+	tb.RateLimits.Capacity = tokenBucketConfig.Capacity
+	tb.CurrentTokenCount = tokenBucketConfig.Capacity
 	tb.LastCall = time.Now()
 	err := models.CreateClient(tb.RateLimits)
-	return err
+	if err != nil {
+		logger.PrintError("Ошибка при установке данных в БД" + err.Error())
+		return err
+	}
+	logger.PrintInfo("Новый клиент добавлен в БД")
+	return nil
 }
 
 func (tb *TokenBucket) GetClientDataFromDB(clientID string) error {
@@ -46,7 +44,12 @@ func (tb *TokenBucket) GetClientDataFromDB(clientID string) error {
 	tb.RateLimits, err = models.GetClient(clientID)
 	tb.CurrentTokenCount = tb.RateLimits.Capacity
 	tb.LastCall = time.Now()
-	return err
+	if err != nil {
+		logger.PrintError("Ошибка при получении данных из БД: " + err.Error())
+		return err
+	}
+	logger.PrintInfo("Данные клиента получены из БД")
+	return nil
 }
 
 func (tb *TokenBucket) GetClientDataFromRedis(clientID string) bool {
@@ -54,9 +57,11 @@ func (tb *TokenBucket) GetClientDataFromRedis(clientID string) bool {
 	defer tb.mutex.Unlock()
 	data, err := models.GetDataFromRedis(clientID)
 	if err != nil || data == nil {
+		logger.PrintWarning("Ошибка при получении данных из Redis")
 		return false
 	}
 	json.Unmarshal(data, tb)
+	logger.PrintInfo("Данные клиента получены из Redis")
 	return true
 }
 
@@ -65,11 +70,13 @@ func (tb *TokenBucket) SetClientDataInRedis() bool {
 	defer tb.mutex.Unlock()
 	data, err := json.Marshal(tb)
 	if err != nil {
+		logger.PrintError("Ошибка при установке данных в Redis")
 		return false
 	}
 	err = models.SetDataInRedis(tb.RateLimits.ClientID, data, time.Hour)
 	if err != nil {
 		return false
 	}
+	logger.PrintInfo("Данные клиента установлены в Redis")
 	return true
 }

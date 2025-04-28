@@ -3,5 +3,7 @@
   "backends": [
     "localhost:9023",
     "localhost:8081"
-  ]
+  ],
+  "capacity" : 100,
+  "rate_per_second" : 2
 }

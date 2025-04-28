@@ -42,8 +42,19 @@ func InitDB() {
 	var tables []string
 	result := DB.Raw("SELECT tablename FROM pg_tables WHERE schemaname = 'public'").Scan(&tables)
 	if result.Error != nil {
-		logger.PrintWarning(result.Error.Error())
+		logger.PrintFatal(result.Error.Error())
 	}
+
+	f := false
+	for _, table := range tables {
+		if table == "rate_limiter" {
+			f = true
+		}
+	}
+	if !f {
+		logger.PrintFatal("Отсутствует таблица \"rate_limiter\"")
+	}
+
 }
 
 func InitRDB() {
@@ -56,7 +67,7 @@ func InitRDB() {
 	defer cancel()
 	pong, err := RDB.Ping(ctx).Result()
 	if err != nil {
-		logger.PrintWarning("Error pinging redis: " + err.Error())
+		logger.PrintFatal("Error pinging redis: " + err.Error())
 	}
 	logger.PrintInfo("Успешное подключение к Reids: " + pong)
 }

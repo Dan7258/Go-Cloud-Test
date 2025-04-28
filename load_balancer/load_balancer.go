@@ -1,23 +1,15 @@
 package loadBalancer
 
 import (
-	"cloud/config_handler"
 	"cloud/logger"
 	"cloud/models"
-	rateLimiter "cloud/rate_limiter"
+	"cloud/rate_limiter"
 	"fmt"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
-	"sync"
 	"time"
 )
-
-type LoadBalancer struct {
-	backends  []*url.URL
-	currentId uint64
-	mutex     sync.Mutex
-}
 
 func (lb *LoadBalancer) ServeProxy(w http.ResponseWriter, r *http.Request) {
 	currentHost := lb.GetNextBackend()
@@ -33,7 +25,6 @@ func (lb *LoadBalancer) ServeProxy(w http.ResponseWriter, r *http.Request) {
 	if currentHost != nil {
 		tokenBucket := new(rateLimiter.TokenBucket)
 		ok := tokenBucket.GetClientDataFromRedis(r.RemoteAddr)
-
 		if !ok {
 			var err error
 			if models.ThsClientExists(r.RemoteAddr) {
@@ -49,10 +40,13 @@ func (lb *LoadBalancer) ServeProxy(w http.ResponseWriter, r *http.Request) {
 		if ok {
 			proxy := httputil.NewSingleHostReverseProxy(currentHost)
 			proxy.ServeHTTP(w, r)
+		} else {
+			logger.SendError(w, http.StatusTooManyRequests, "Куда летим? Слишком много запросов!")
 		}
 		tokenBucket.SetClientDataInRedis()
 
 	} else {
+		logger.SendError(w, http.StatusServiceUnavailable, "Серверам плохо, попробуйте позже")
 		logger.PrintError("Нет доступных серверов")
 	}
 }
@@ -62,14 +56,6 @@ func (lb *LoadBalancer) GetNextBackend() *url.URL {
 	defer lb.mutex.Unlock()
 	lb.currentId = (lb.currentId + 1) % uint64(len(lb.backends))
 	return lb.backends[lb.currentId]
-}
-
-func (lb *LoadBalancer) Init(config configHandler.Config) {
-	lb.currentId = 0
-	lb.backends = make([]*url.URL, len(config.Backends))
-	for i, _ := range lb.backends {
-		lb.backends[i], _ = url.Parse("http://" + config.Backends[i])
-	}
 }
 
 func (lb *LoadBalancer) Ping(backend *url.URL) bool {
