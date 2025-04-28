@@ -1,3 +1,4 @@
+// Package rateLimiter предоставляет функционал для ограничения частоты запросов с использованием алгоритма Token Bucket.
 package rateLimiter
 
 import (
@@ -7,6 +8,8 @@ import (
 	"time"
 )
 
+// CallClient уменьшает количество доступных токенов на 1 и обновляет время последнего запроса.
+// Возвращает true, если запрос успешен (токены есть), иначе false.
 func (tb *TokenBucket) CallClient() bool {
 	tb.mutex.Lock()
 	defer tb.mutex.Unlock()
@@ -18,6 +21,8 @@ func (tb *TokenBucket) CallClient() bool {
 	return true
 }
 
+// CreateNewClient создает нового клиента с переданным clientID и инициализирует его данные.
+// Добавляет нового клиента в базу данных.
 func (tb *TokenBucket) CreateNewClient(clientID string) error {
 	tb.mutex.Lock()
 	defer tb.mutex.Unlock()
@@ -28,13 +33,15 @@ func (tb *TokenBucket) CreateNewClient(clientID string) error {
 	tb.LastCall = time.Now()
 	err := models.CreateClient(tb.RateLimits)
 	if err != nil {
-		logger.PrintError("Ошибка при установке данных в БД" + err.Error())
+		logger.PrintError("Ошибка при установке данных в БД: " + err.Error())
 		return err
 	}
 	logger.PrintInfo("Новый клиент добавлен в БД")
 	return nil
 }
 
+// GetClientDataFromDB загружает данные клиента из базы данных по его clientID.
+// Обновляет количество токенов до максимальной емкости и устанавливает время последнего запроса.
 func (tb *TokenBucket) GetClientDataFromDB(clientID string) error {
 	tb.mutex.Lock()
 	defer tb.mutex.Unlock()
@@ -50,6 +57,8 @@ func (tb *TokenBucket) GetClientDataFromDB(clientID string) error {
 	return nil
 }
 
+// GetClientDataFromRedis загружает данные клиента из Redis.
+// Если данные не найдены или произошла ошибка, возвращает false.
 func (tb *TokenBucket) GetClientDataFromRedis(clientID string) bool {
 	tb.mutex.Lock()
 	defer tb.mutex.Unlock()
@@ -63,15 +72,17 @@ func (tb *TokenBucket) GetClientDataFromRedis(clientID string) bool {
 	return true
 }
 
+// SetClientDataInRedis сохраняет данные клиента в Redis.
+// Возвращает false в случае ошибки.
 func (tb *TokenBucket) SetClientDataInRedis() bool {
 	tb.mutex.Lock()
 	defer tb.mutex.Unlock()
+
 	data, err := json.Marshal(tb)
 	if err != nil {
 		logger.PrintError("Ошибка при установке данных в Redis: " + err.Error())
 		return false
 	}
-
 	err = models.SetDataInRedis(tb.RateLimits.ClientID, data, time.Hour)
 	if err != nil {
 		return false
@@ -80,6 +91,7 @@ func (tb *TokenBucket) SetClientDataInRedis() bool {
 	return true
 }
 
+// UpdateClientDataByKeysInRedis обновляет данные всех клиентов в Redis, добавляя токены, основываясь на времени последнего запроса.
 func UpdateClientDataByKeysInRedis() {
 	keys, err := models.GetAllKeysFromRedis()
 	if err != nil {
@@ -99,6 +111,7 @@ func UpdateClientDataByKeysInRedis() {
 	logger.PrintInfo("Пополнили токены")
 }
 
+// StartTokenTicker запускает тикер, который обновляет данные клиентов в Redis каждые 30 секунд.
 func StartTokenTicker() {
 	tiker := time.NewTicker(30 * time.Second)
 	defer tiker.Stop()

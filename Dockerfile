@@ -14,5 +14,7 @@ FROM alpine:3.20
 WORKDIR /app
 
 COPY --from=builder /app/cloud .
+
 RUN chmod +x ./cloud
+
 CMD ["./cloud"]

@@ -9,6 +9,7 @@ import (
 	"net/http"
 )
 
+// Main запускает все необходимые функции.
 func main() {
 	config := new(configHandler.Config)
 	config.Init()
